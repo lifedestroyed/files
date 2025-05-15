@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FileAPI.ld - Unavailable</title>
+    <title>Access Restricted | 404</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            background: linear-gradient(45deg, #008dff, #a151ff);
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
             background-size: 400% 400%;
             animation: gradient 12s ease infinite;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             color: rgba(255, 255, 255, 0.92);
-            background-color: #121212;
         }
 
         @keyframes gradient {
@@ -23,42 +22,54 @@
             100% { background-position: 0% 50%; }
         }
 
-        .container {
+        .alert-container {
             text-align: center;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             padding: 2rem;
-            background: rgba(18, 18, 18, 0.9);
+            background: rgba(18, 18, 18, 0.95);
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
             max-width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
+            font-size: 2.4rem;
+            margin: 1rem 0;
             letter-spacing: -0.03em;
+            background: linear-gradient(90deg, #ff6b6b, #ffa500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .message {
+        .status-code {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-message {
             font-size: 1.1rem;
             line-height: 1.6;
             opacity: 0.85;
             max-width: 600px;
-            margin: 0 auto;
+            margin: 1rem auto;
+            padding: 0 1rem;
         }
 
-        .warning-icon {
-            font-size: 3rem;
-            margin-bottom: 1.5rem;
+        .status-icon {
+            font-size: 3.5rem;
+            margin: 1rem 0;
             display: block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         }
 
         @media (max-width: 768px) {
-            .container {
+            .alert-container {
                 padding: 1.5rem;
                 width: 85%;
             }
@@ -67,18 +78,30 @@
                 font-size: 2rem;
             }
             
-            .message {
+            .alert-message {
                 font-size: 1rem;
+            }
+            
+            .status-icon {
+                font-size: 2.5rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <span class="warning-icon">⚠️</span>
-        <h1>FileAPI.ld Access Restricted</h1>
-        <p class="message">
-            This API endpoint is currently unavailable for public use. Access is strictly limited to authorized ld.team members only. Unauthorized attempts to interact with the API will be logged and may result in permanent IP blocking. Please contact the system administrator if you believe you should have access.
+    <div class="alert-container">
+        <div class="status-icon">🚫🔒</div>
+        <div class="status-code">404 | 403</div>
+        <h1>Restricted Access</h1>
+        <p class="alert-message">
+            The requested resource is either unavailable or access has been restricted. 
+            This could be due to one of the following reasons:<br><br>
+            • The file/resource does not exist (404)<br>
+            • Your access privileges are insufficient (403)<br>
+            • The resource has been permanently removed<br><br>
+            All access attempts are monitored and logged. Repeated unauthorized requests 
+            may result in network restrictions. If you believe this is an error, 
+            please contact your system administrator with detailed information.
         </p>
     </div>
 </body>
