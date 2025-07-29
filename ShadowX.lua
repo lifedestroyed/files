@@ -1,18 +1,19 @@
--- ShadowX Premium Script v3.2
--- Universal (Executor/LocalScript)
+-- ShadowX Premium Script v3.3
+-- Fixed Version for Delta/R6/R15/All Executors
 
 --[[
-  Credits:
-  - UI Design: ShadowX Team
-  - Fly System: Advanced inertia flight
-  - ESP System: Optimized rendering
-  - Core Scripting: ShadowX Dev Team
-  - Special Thanks: Infinite Yield for inspiration
+  Changelog:
+  - Fixed ESP for R15 bodies
+  - Improved GUI dragging
+  - Delta executor compatibility
+  - Better noclip implementation
+  - R6 character force
 ]]
 
 -- Environment detection
 local isExecutor = (syn and true) or (protect_gui and true) or 
-	(getgenv and true) or (is_sirhurt_closure and true) or false
+	(getgenv and true) or (is_sirhurt_closure and true) or 
+	(identifyexecutor and true) or false
 
 -- Services
 local Players = game:GetService("Players")
@@ -22,6 +23,16 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+
+-- Force R6 character (fix for ESP and body issues)
+if LocalPlayer.Character then
+	LocalPlayer.Character:BreakJoints()
+end
+LocalPlayer.CharacterAdded:Connect(function(char)
+	local humanoid = char:WaitForChild("Humanoid")
+	humanoid.RigType = Enum.HumanoidRigType.R6
+end)
 
 -- Main variables
 local selectedPlayer = nil
@@ -58,6 +69,7 @@ local function StartFly()
 	flyBodyGyro = Instance.new("BodyGyro")
 	flyBodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
 	flyBodyGyro.P = 10000
+	flyBodyGyro.D = 500
 	flyBodyGyro.Parent = humanoid.RootPart
 
 	-- Flight control function
@@ -102,9 +114,18 @@ local function StopFly()
 	if connections.flyLoop then connections.flyLoop:Disconnect() end
 end
 
--- ESP System
+-- Fixed ESP System for R15/R6
 local function CreateESP(player)
 	if not player or not player.Character then return end
+
+	-- Wait for body parts to load
+	local function waitForParts(char)
+		local root = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 3)
+		local head = char:FindFirstChild("Head") or char:WaitForChild("Head", 3)
+		return root and head
+	end
+
+	if not waitForParts(player.Character) then return end
 
 	-- Remove existing ESP if any
 	if espFolders[player] then
@@ -115,15 +136,16 @@ local function CreateESP(player)
 	local character = player.Character
 	local espFolder = Instance.new("Folder")
 	espFolder.Name = player.Name.."_ESP"
-	espFolder.Parent = character
+	espFolder.Parent = CoreGui
 
-	-- Highlight
+	-- Highlight with fixed properties
 	local highlight = Instance.new("Highlight")
 	highlight.Name = "Highlight"
 	highlight.Adornee = character
 	highlight.FillColor = Color3.fromRGB(255, 50, 50)
 	highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
 	highlight.FillTransparency = 0.5
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	highlight.Parent = espFolder
 
 	-- Name Tag
@@ -169,7 +191,7 @@ local function CreateESP(player)
 		healthFill.Parent = healthFrame
 
 		-- Update health
-		connections.healthChanged = humanoid.HealthChanged:Connect(function()
+		connections[player.."healthChanged"] = humanoid.HealthChanged:Connect(function()
 			healthFill.Size = UDim2.new(humanoid.Health / humanoid.MaxHealth, 0, 1, 0)
 			healthFill.BackgroundColor3 = Color3.fromHSV(humanoid.Health / humanoid.MaxHealth * 0.3, 1, 1)
 		end)
@@ -178,7 +200,7 @@ local function CreateESP(player)
 	espFolders[player] = espFolder
 
 	-- Cleanup when character changes
-	connections.characterRemoving = player.CharacterRemoving:Connect(function()
+	connections[player.."characterRemoving"] = player.CharacterRemoving:Connect(function()
 		if espFolders[player] then
 			espFolders[player]:Destroy()
 			espFolders[player] = nil
@@ -192,11 +214,26 @@ ShadowX.Name = "ShadowXPremium_"..tostring(math.random(1, 10000))
 ShadowX.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ShadowX.ResetOnSpawn = false
 
-if isExecutor then
-	ShadowX.Parent = CoreGui
-else
-	ShadowX.Parent = LocalPlayer:WaitForChild("PlayerGui")
+-- Improved GUI protection
+local function ProtectGUI(gui)
+	if isExecutor then
+		if protect_gui then
+			protect_gui(gui)
+		elseif syn and syn.protect_gui then
+			syn.protect_gui(gui)
+		elseif getgenv().protectgui then
+			getgenv().protectgui(gui)
+		elseif gethui then
+			gui.Parent = gethui()
+		else
+			gui.Parent = CoreGui
+		end
+	else
+		gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+	end
 end
+
+ProtectGUI(ShadowX)
 
 -- Styling
 local mainColor = Color3.fromRGB(28, 28, 36)
@@ -208,14 +245,12 @@ local errorColor = Color3.fromRGB(255, 60, 60)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 400, 0, 500)
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
 MainFrame.BackgroundColor3 = mainColor
 MainFrame.BackgroundTransparency = 0.1
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 MainFrame.Active = true
-MainFrame.Draggable = true
 MainFrame.Parent = ShadowX
 
 -- UI Elements
@@ -229,7 +264,7 @@ UIStroke.Thickness = 2
 UIStroke.Transparency = 0.7
 UIStroke.Parent = MainFrame
 
--- Title Bar
+-- Title Bar with improved dragging
 local TitleBar = Instance.new("Frame")
 TitleBar.Name = "TitleBar"
 TitleBar.Size = UDim2.new(1, 0, 0, 40)
@@ -248,14 +283,14 @@ Title.Name = "Title"
 Title.Size = UDim2.new(1, -40, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "SHADOW X"
+Title.Text = "SHADOW X v3.3"
 Title.TextColor3 = accentColor
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = TitleBar
 
--- Close Button
+-- Improved Close Button
 local CloseButton = Instance.new("TextButton")
 CloseButton.Name = "CloseButton"
 CloseButton.Size = UDim2.new(0, 30, 0, 30)
@@ -272,6 +307,43 @@ CloseButton.Parent = TitleBar
 local UICorner3 = Instance.new("UICorner")
 UICorner3.CornerRadius = UDim.new(0, 6)
 UICorner3.Parent = CloseButton
+
+-- Improved dragging system
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function updateInput(input)
+	local delta = input.Position - dragStart
+	MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+TitleBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		updateInput(input)
+	end
+end)
 
 -- Close animation
 CloseButton.MouseButton1Click:Connect(function()
@@ -562,7 +634,7 @@ end
 
 local function GetRootPart(player)
 	local character = GetCharacter(player)
-	return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso")
+	return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
 end
 
 -- Update player list
@@ -592,7 +664,7 @@ AddButton(PlayersTab, "Teleport to Player", function()
 		local myRoot = GetRootPart(LocalPlayer)
 
 		if targetRoot and myRoot then
-			myRoot.CFrame = targetRoot.CFrame
+			myRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -3)
 		end
 	end
 end)
@@ -630,7 +702,7 @@ AddButton(PlayersTab, "Copy Outfit", function()
 				fake.CanCollide = false
 
 				local weld = Instance.new("WeldConstraint")
-				weld.Part0 = myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("UpperTorso")
+				weld.Part0 = myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("UpperTorso") or myChar:FindFirstChild("Torso")
 				weld.Part1 = fake
 				weld.Parent = fake
 			end
@@ -847,7 +919,7 @@ end)
 
 -- Credits
 local creditsText = [[
-ShadowX Premium Script v3.2
+ShadowX Premium Script v3.3
 
 Credits:
 - UI Design: ShadowX Team
@@ -856,14 +928,12 @@ Credits:
 - Core Scripting: ShadowX Dev Team
 - Special Thanks: Infinite Yield for inspiration
 
-Features:
-- Improved Fly with inertia
-- Working ESP with health bars
-- God Mode
-- Noclip
-- Player utilities
-- Weapon system
-- Admin tools
+Changelog:
+- Fixed ESP for R15 bodies
+- Improved GUI dragging
+- Delta executor compatibility
+- Better noclip implementation
+- R6 character force
 ]]
 
 local creditsLabel = Instance.new("TextLabel")
@@ -880,11 +950,11 @@ creditsLabel.TextYAlignment = Enum.TextYAlignment.Top
 creditsLabel.TextWrapped = true
 creditsLabel.Parent = CreditsTab
 
--- Noclip loop
+-- Noclip loop with improved performance
 connections.noclipLoop = RunService.Stepped:Connect(function()
 	if noclip and LocalPlayer.Character then
 		for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-			if part:IsA("BasePart") then
+			if part:IsA("BasePart") and part.CanCollide then
 				part.CanCollide = false
 			end
 		end
@@ -894,6 +964,7 @@ end)
 -- Update on character spawn
 LocalPlayer.CharacterAdded:Connect(function(character)
 	local humanoid = character:WaitForChild("Humanoid")
+	humanoid.RigType = Enum.HumanoidRigType.R6
 
 	humanoid.WalkSpeed = walkspeed
 	humanoid.JumpPower = jumppower
@@ -913,20 +984,9 @@ end)
 Players.PlayerAdded:Connect(UpdatePlayerList)
 Players.PlayerRemoving:Connect(UpdatePlayerList)
 
--- GUI Protection
-local function ProtectGUI(gui)
-	if isExecutor then
-		if protect_gui then
-			protect_gui(gui)
-		elseif syn and syn.protect_gui then
-			syn.protect_gui(gui)
-		elseif getgenv().protectgui then
-			getgenv().protectgui(gui)
-		end
-	end
-end
-
-ProtectGUI(ShadowX)
+-- Initialization animation
+MainFrame.Size = UDim2.new(0, 0, 0, 0)
+TweenService:Create(MainFrame, TweenInfo.new(0.5), {Size = UDim2.new(0, 400, 0, 500)}):Play()
 
 -- Cleanup
 game:GetService("Players").PlayerRemoving:Connect(function(player)
@@ -940,6 +1000,13 @@ game:GetService("Players").PlayerRemoving:Connect(function(player)
 	end
 end)
 
--- Initialization animation
-MainFrame.Size = UDim2.new(0, 0, 0, 0)
-TweenService:Create(MainFrame, TweenInfo.new(0.5), {Size = UDim2.new(0, 400, 0, 500)}):Play()
+-- Notification function
+local function Notify(text)
+	StarterGui:SetCore("SendNotification", {
+		Title = "ShadowX",
+		Text = text,
+		Duration = 3
+	})
+end
+
+Notify("ShadowX Premium v3.3 loaded!")
