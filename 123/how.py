@@ -1,6 +1,5 @@
-#Created by lifedestroyed & ld.team, 2025. https://github.com/lifedestroyed/ & https://teamld.github.io/
-
 import random
+import string
 
 # Приветствие
 def greet():
@@ -21,6 +20,12 @@ movies = {
 
 # Словарь для хранения паролей
 passwords = {}
+
+# Функция для генерации случайного пароля
+def generate_random_password(length=12):
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = ''.join(random.choice(characters) for _ in range(length))
+    return password
 
 # Функции для управления рейтингами фильмов
 def show_movies():
@@ -63,9 +68,9 @@ def show_passwords():
 
 def add_password():
     name = input("Введите название для пароля: ")
-    password = input("Введите пароль: ")
+    password = generate_random_password()
     passwords[name] = password
-    print("Пароль для '{}' добавлен.".format(name))
+    print("Пароль для '{}' добавлен: {}".format(name, password))
 
 def remove_password():
     name = input("Введите название пароля для удаления: ")
